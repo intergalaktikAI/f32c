@@ -130,11 +130,11 @@
 | Clock | Frequency | Source | Purpose |
 |-------|-----------|--------|---------|
 | clk_25mhz | 25 MHz | Board input | PLL reference |
-| clk | 75 MHz | PLL out2 | CPU + SDRAM |
+| clk | 50 MHz | PLL out2 | CPU + SDRAM |
 | clk_pixel | 25 MHz | PLL out1 | Video pixel clock |
 | clk_pixel_shift | 125 MHz | PLL out0 | HDMI shift clock |
 
-**Note:** CPU clock reduced from 100 MHz to 75 MHz for better timing with Trellis.
+**Note:** CPU clock reduced from 100 MHz → 75 MHz → 50 MHz for Trellis compatibility.
 
 ---
 
