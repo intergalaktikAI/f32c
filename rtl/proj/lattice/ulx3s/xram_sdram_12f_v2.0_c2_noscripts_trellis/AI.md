@@ -125,11 +125,23 @@
 
 ---
 
+## Clock Configuration
+
+| Clock | Frequency | Source | Purpose |
+|-------|-----------|--------|---------|
+| clk_25mhz | 25 MHz | Board input | PLL reference |
+| clk | 75 MHz | PLL out2 | CPU + SDRAM |
+| clk_pixel | 25 MHz | PLL out1 | Video pixel clock |
+| clk_pixel_shift | 125 MHz | PLL out0 | HDMI shift clock |
+
+**Note:** CPU clock reduced from 100 MHz to 75 MHz for better timing with Trellis.
+
+---
+
 ## Known Issues
 
-1. **CPU Clock:** Currently configured for 100 MHz, may need reduction to 75 MHz for timing closure with Trellis
-2. **BRAM Inference:** Some patterns still infer distributed RAM (TRELLIS_DPR16X4) instead of block RAM
-3. **Timing:** May need `--timing-allow-fail` for initial testing
+1. **BRAM Inference:** Some patterns still infer distributed RAM (TRELLIS_DPR16X4) instead of block RAM
+2. **Timing:** May need `--timing-allow-fail` for initial testing
 
 ---
 
