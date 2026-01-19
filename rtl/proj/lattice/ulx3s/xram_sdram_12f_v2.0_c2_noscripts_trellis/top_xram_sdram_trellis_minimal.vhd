@@ -25,8 +25,8 @@ entity ulx3s_xram_sdram_vector is
     C_arch: integer := ARCH_MI32;
     C_debug: boolean := false;
 
-    -- Main clock: 50 MHz (reduced from 75MHz - still not working on ULX3S)
-    C_clk_freq: integer := 50;
+    -- Main clock: 78.125 MHz (original Diamond working frequency)
+    C_clk_freq: integer := 78;
 
     -- SoC configuration options
     C_boot_rom: boolean := true;
@@ -181,13 +181,14 @@ architecture Behavioral of ulx3s_xram_sdram_vector is
 
 begin
   -- Clock generation using ecp5pll (open-source compatible)
-  -- 25MHz input -> 125MHz pixel shift, 25MHz pixel, 50MHz CPU
+  -- 25MHz input -> 125MHz pixel shift, 25MHz pixel, 78.125MHz CPU
+  -- Matches original Diamond configuration: clk_25_78_125_25
   I_pll: entity work.ecp5pll
   generic map (
     in_hz      => 25000000,
     out0_hz    => 125000000,  -- pixel shift clock
     out1_hz    => 25000000,   -- pixel clock
-    out2_hz    => 50000000    -- CPU clock (reduced from 75MHz - still not working)
+    out2_hz    => 78125000    -- CPU clock (78.125 MHz - original working frequency)
   )
   port map (
     clk_i      => clk_25mhz,
