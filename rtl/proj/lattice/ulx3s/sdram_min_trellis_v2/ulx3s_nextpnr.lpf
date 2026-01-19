@@ -1,9 +1,13 @@
 # ULX3S LPF for nextpnr-ecp5 (sdram_min)
 # Based on ulx3s_fer.lpf, stripped of unsupported commands
 
-# Clock
+# Input Clock (25 MHz)
 LOCATE COMP "clk_25m" SITE "G2";
 FREQUENCY PORT "clk_25m" 25 MHZ;
+
+# PLL Generated Clock (~84 MHz) - main system clock
+# Net name depends on synthesis; use the internal clock net
+FREQUENCY NET "clk" 84.375 MHZ;
 
 # UART
 LOCATE COMP "rs232_rx" SITE "M1";

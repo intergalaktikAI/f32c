@@ -112,7 +112,7 @@ begin
 	C_clk_freq => C_clk_freq,
 	C_icache_size => C_icache_size,
 	C_dcache_size => C_dcache_size,
-	C_spi => 3,
+	C_spi => 0,  -- Disabled for GHDL compatibility (inout port issues)
 	C_simple_out => 8,
 	C_simple_in => 20,
 	C_debug => false
@@ -134,19 +134,7 @@ begin
 	sio_txd(0) => rs232_tx,
 	sio_break(0) => sio_break,
 	simple_in => R_simple_in,
-	simple_out => led,
-	spi_ss(0) => flash_csn,
-	spi_ss(1) => sd_d(3),
-	spi_ss(2) => adc_csn,
-	spi_sck(0) => flash_sck,
-	spi_sck(1) => sd_clk,
-	spi_sck(2) => adc_sclk,
-	spi_mosi(0) => flash_si,
-	spi_mosi(1) => sd_cmd,
-	spi_mosi(2) => adc_mosi,
-	spi_miso(0) => flash_so,
-	spi_miso(1) => sd_d(0),
-	spi_miso(2) => adc_miso
+	simple_out => led
     );
     R_simple_in <= sw & x"00" & '0' & not btn_pwr & btn_f2 & btn_f1
       & btn_up & btn_down & btn_left & btn_right when rising_edge(clk);

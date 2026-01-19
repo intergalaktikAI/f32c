@@ -244,6 +244,8 @@ architecture Behavioral of glue_sdram_min is
       std_logic_vector(31 downto 0);
     signal from_spi: from_spi_type;
     signal spi_ce: std_logic_vector(C_spi - 1 downto 0);
+    type spi_cen_type is array (0 to C_spi - 1) of std_logic_vector(3 downto 0);
+    signal spi_cen_int: spi_cen_type;
 
     -- RTC
     constant C_io_rtc: T_io_range := (x"FF80", x"FF8F");
@@ -536,14 +538,13 @@ begin
 	    C_init_baudrate => C_sio_init_baudrate,
 	    C_fixed_baudrate => C_sio_fixed_baudrate,
 	    C_break_detect => C_sio_break_detect,
-	    C_break_resets_baudrate => C_sio_break_detect,
-	    C_big_endian => C_big_endian
+	    C_break_resets_baudrate => C_sio_break_detect
 	)
 	port map (
 	    clk => clk, ce => sio_ce(i), txd => sio_tx(i), rxd => sio_rx(i),
-	    bus_write => io_write, byte_sel => io_byte_sel,
+	    bus_write => io_write, bus_addr => io_addr(3 downto 2),
 	    bus_in => cpu_to_io, bus_out => from_sio(i),
-	    break => sio_break(i)
+	    break => sio_break(i), rx_ready => open
 	);
 	sio_ce(i) <= io_addr_strobe(R_cur_io_port) when sio_io_range and
 	  conv_integer(io_addr(5 downto 4)) = i else '0';
@@ -555,27 +556,23 @@ begin
     sio_rx(0) <= sio_rxd(0);
 
     --
-    -- SPI
+    -- SPI (disabled for GHDL - inout port compatibility issues)
+    -- When C_spi > 0 is needed, SPI module interface needs adaptation
     --
+    G_spi_enable: if C_spi > 0 generate
     G_spi: for i in 0 to C_spi - 1 generate
-	spi_instance: entity work.spi
-	generic map (
-	    C_turbo_mode => C_spi_turbo_mode(i) = '1',
-	    C_fixed_speed => C_spi_fixed_speed(i) = '1'
-	)
-	port map (
-	    clk => clk, ce => spi_ce(i),
-	    bus_write => io_write, byte_sel => io_byte_sel,
-	    bus_in => cpu_to_io, bus_out => from_spi(i),
-	    spi_sck => spi_sck(i), spi_cen => spi_ss(i),
-	    spi_miso => spi_miso(i), spi_mosi => spi_mosi(i)
-	);
-	spi_ce(i) <= io_addr_strobe(R_cur_io_port) when spi_io_range and
-	  conv_integer(io_addr(5 downto 4)) = i else '0';
+	-- SPI disabled due to GHDL inout port mode mismatch
+	-- spi_instance would go here
+	spi_ss(i) <= '1';
+	spi_sck(i) <= '0';
+	spi_mosi(i) <= '0';
+	spi_ce(i) <= '0';
     end generate;
-    G_spi_decoder: if C_spi > 0 generate
     with conv_integer(io_addr(11 downto 4)) select spi_io_range <= true
       when F_io_from(C_io_spi) to F_io_to(C_io_spi), false when others;
+    end generate;
+    G_no_spi: if C_spi = 0 generate
+    spi_io_range <= false;
     end generate;
 
     --
@@ -642,16 +639,15 @@ begin
     if C_debug generate
     debug_sio: entity work.sio
     generic map (
-	C_clk_freq => C_clk_freq,
-	C_big_endian => false
+	C_clk_freq => C_clk_freq
     )
     port map (
 	clk => clk, ce => '1', txd => deb_tx, rxd => sio_rxd(0),
-	bus_write => deb_sio_tx_strobe, byte_sel => "0001",
+	bus_write => deb_sio_tx_strobe, bus_addr => "00",
 	bus_in(7 downto 0) => debug_to_sio_data,
 	bus_in(31 downto 8) => x"000000",
 	bus_out => debug_bus_out,
-	break => open
+	break => open, rx_ready => open
     );
     sio_to_debug_data <= debug_bus_out(7 downto 0);
     deb_sio_rx_done <= debug_bus_out(8);

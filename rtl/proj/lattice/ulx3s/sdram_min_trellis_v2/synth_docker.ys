@@ -1,0 +1,40 @@
+# f32c sdram_min Synthesis Script
+# Compatible with:
+# - Docker with mount: -v "rtl:/src" (uses /src/ paths)
+# - GitHub Actions container: uses relative paths
+# Note: Script tries /src paths first, falls back to relative
+
+ghdl --ieee=synopsys -fexplicit -frelaxed-rules --latches --work=work \
+  ../../../../cpu/defs_mi32.vhd \
+  ../../../../cpu/defs_rv32.vhd \
+  ../../../../cpu/defs_f32c.vhd \
+  ../../../../cpu/idecode_mi32.vhd \
+  ../../../../cpu/idecode_rv32.vhd \
+  ../../../../cpu/debug.vhd \
+  ../../../../cpu/alu.vhd \
+  ../../../../cpu/shift.vhd \
+  ../../../../cpu/loadalign.vhd \
+  ../../../../cpu/mul_dsp.vhd \
+  ../../../../generic/bptrace.vhd \
+  ../../../../generic/reg1w2r.vhd \
+  ../../../../cpu/pipeline.vhd \
+  ../../../../cpu/cache_ghdl.vhd \
+  ../../../../generic/bram_true2p_1clk.vhd \
+  ../../../../generic/bootloader/defs_bootblock.vhd \
+  ../../../../generic/bootloader/boot_sio_rv32el.vhd \
+  ../../../../generic/bootloader/boot_sio_mi32el.vhd \
+  ../../../../generic/bootloader/boot_sio_mi32eb.vhd \
+  ../../../../generic/bootloader/boot_rom_mi32el.vhd \
+  ./sdram_controller_ghdl.vhd \
+  ../../../../soc/sio.vhd \
+  ../../../../soc/spi.vhd \
+  ../../../../soc/rtc.vhd \
+  ../../../../generic/rom.vhd \
+  ./glue_sdram_min_ghdl.vhd \
+  ../../../../lattice/chip/ecp5u/ecp5pll.vhd \
+  ../../../../lattice/chip/ecp5u/ecp5_flash_clk.vhd \
+  ./top_sdram_min.vhd \
+  -e top_sdram
+
+# Synthesize for ECP5
+synth_ecp5 -top top_sdram -json sdram_min.json

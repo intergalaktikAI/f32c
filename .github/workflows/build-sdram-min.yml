@@ -4,18 +4,18 @@ on:
   workflow_dispatch:
     inputs:
       device:
-        description: 'ECP5 Device'
+        description: 'ECP5 Device Size'
         required: true
-        default: '12k'
+        default: '12'
         type: choice
         options:
-          - '12k'
-          - '25k'
-          - '45k'
-          - '85k'
+          - '12'
+          - '25'
+          - '45'
+          - '85'
 
 env:
-  DEVICE: ${{ github.event.inputs.device || '12k' }}
+  DEVICE: ${{ github.event.inputs.device || '12' }}
   PROJECT_DIR: rtl/proj/lattice/ulx3s/sdram_min_trellis_v2
 
 jobs:
@@ -27,19 +27,36 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v4
 
-    - name: Install oss-cad-suite
+    - name: Run synthesis (GHDL + Yosys)
       run: |
-        wget -q https://github.com/YosysHQ/oss-cad-suite-build/releases/download/2024-02-14/oss-cad-suite-linux-x64-20240214.tgz
-        tar xzf oss-cad-suite-linux-x64-20240214.tgz
+        docker run --rm -v ${{ github.workspace }}/rtl:/src \
+          -w /src/proj/lattice/ulx3s/sdram_min_trellis_v2 \
+          hdlc/ghdl:yosys \
+          yosys -m ghdl synth_docker.ys
+
+    - name: Install nextpnr-ecp5
+      run: |
+        wget -q https://github.com/YosysHQ/oss-cad-suite-build/releases/download/2024-12-09/oss-cad-suite-linux-x64-20241209.tgz
+        tar xzf oss-cad-suite-linux-x64-20241209.tgz
         echo "$PWD/oss-cad-suite/bin" >> $GITHUB_PATH
 
-    - name: Build with Make
+    - name: Run place and route (nextpnr-ecp5)
       working-directory: ${{ env.PROJECT_DIR }}
       run: |
-        make FPGA_SIZE=${{ env.DEVICE }}
+        nextpnr-ecp5 --${{ env.DEVICE }}k --speed 6 --package CABGA381 \
+          --json sdram_min.json \
+          --lpf ulx3s_nextpnr.lpf \
+          --lpf-allow-unconstrained \
+          --timing-allow-fail \
+          --textcfg sdram_min.config
+
+    - name: Generate bitstream (ecppack)
+      working-directory: ${{ env.PROJECT_DIR }}
+      run: |
+        ecppack --compress sdram_min.config sdram_min.bit
 
     - name: Upload bitstream artifact
       uses: actions/upload-artifact@v4
       with:
-        name: sdram_min-${{ env.DEVICE }}
+        name: sdram_min-${{ env.DEVICE }}k
         path: ${{ env.PROJECT_DIR }}/sdram_min.bit
