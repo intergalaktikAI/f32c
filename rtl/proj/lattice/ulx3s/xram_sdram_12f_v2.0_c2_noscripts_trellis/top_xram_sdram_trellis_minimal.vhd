@@ -148,7 +148,7 @@ architecture Behavioral of ulx3s_xram_sdram_vector is
   signal dvid_crgb: std_logic_vector(7 downto 0);
   signal ddr_d: std_logic_vector(3 downto 0);
 
-  signal S_reset: std_logic := '0';
+  signal S_reset: std_logic := '1';  -- Start in reset, release when PLL locks
   signal xdma_addr: std_logic_vector(29 downto 2) := ('0', others => '0');
   signal xdma_strobe: std_logic := '0';
   signal xdma_data_ready: std_logic := '0';
@@ -197,6 +197,9 @@ begin
   clk_pixel_shift <= pll_clk(0);
   clk_pixel <= pll_clk(1);
   clk <= pll_clk(2);
+
+  -- Reset logic: hold in reset until PLL locks
+  S_reset <= not pll_lock;
 
   -- Simple serial passthrough
   S_rxd <= ftdi_txd;

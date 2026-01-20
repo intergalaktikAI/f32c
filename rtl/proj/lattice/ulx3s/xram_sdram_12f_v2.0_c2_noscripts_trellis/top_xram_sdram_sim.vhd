@@ -1,7 +1,6 @@
--- f32c XRAM SDRAM for ULX3S - Open-source toolchain version
--- Modified for GHDL + Yosys + nextpnr-ecp5 compatibility
--- Based on top_ulx3s_12f_xram_sdram.vhd by EMARD
--- Port names match ulx3s_v20.lpf
+-- f32c XRAM SDRAM for ULX3S - SIMULATION VERSION
+-- Uses serial bootloader (C_boot_spi=false) for simulation without SPI flash model
+-- Based on top_xram_sdram_trellis_minimal.vhd
 
 library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
@@ -25,8 +24,8 @@ entity ulx3s_xram_sdram_vector is
     C_arch: integer := ARCH_MI32;
     C_debug: boolean := false;
 
-    -- Main clock: 100 MHz
-    C_clk_freq: integer := 100;
+    -- Main clock: 50 MHz (testing lower frequency)
+    C_clk_freq: integer := 50;
 
     -- SoC configuration options
     C_boot_rom: boolean := true;
@@ -35,7 +34,7 @@ entity ulx3s_xram_sdram_vector is
     C_bram_const_init: boolean := true;
     C_boot_write_protect: boolean := true;
     C_boot_rom_data_bits: integer := 32;
-    C_boot_spi: boolean := true;
+    C_boot_spi: boolean := false;  -- SIMULATION: Use serial bootloader (not SPI flash)
     C_xram_base: std_logic_vector(31 downto 28) := x"8";
     C_PC_mask: std_logic_vector(31 downto 0) := x"81ffffff";
     C_cached_addr_bits: integer := 25;
@@ -48,10 +47,10 @@ entity ulx3s_xram_sdram_vector is
     C_dcache_size: integer := 8;
     C_branch_prediction: boolean := true;
     C_sio: integer := 1;
-    C_spi: integer := 2;
+    C_spi: integer := 2;  -- Flash + SD card
     C_spi_fixed_speed: std_logic_vector := "11";
     C_simple_io: boolean := true;
-    C_gpio: integer := 32;
+    C_gpio: integer := 0;  -- Disabled for GHDL tristate fix
     C_gpio_pullup: boolean := false;
     C_gpio_adc: integer := 0;
     C_timer: boolean := true;
@@ -148,7 +147,7 @@ architecture Behavioral of ulx3s_xram_sdram_vector is
   signal dvid_crgb: std_logic_vector(7 downto 0);
   signal ddr_d: std_logic_vector(3 downto 0);
 
-  signal S_reset: std_logic := '0';
+  signal S_reset: std_logic := '1';  -- Start in reset, release when PLL locks
   signal xdma_addr: std_logic_vector(29 downto 2) := ('0', others => '0');
   signal xdma_strobe: std_logic := '0';
   signal xdma_data_ready: std_logic := '0';
@@ -181,13 +180,13 @@ architecture Behavioral of ulx3s_xram_sdram_vector is
 
 begin
   -- Clock generation using ecp5pll (open-source compatible)
-  -- 25MHz input -> 125MHz pixel shift, 25MHz pixel, 100MHz CPU
+  -- 25MHz input -> 125MHz pixel shift, 25MHz pixel, 50MHz CPU+SDRAM
   I_pll: entity work.ecp5pll
   generic map (
     in_hz      => 25000000,
     out0_hz    => 125000000,  -- pixel shift clock
     out1_hz    => 25000000,   -- pixel clock
-    out2_hz    => 100000000   -- CPU clock
+    out2_hz    => 50000000    -- CPU+SDRAM clock (50 MHz)
   )
   port map (
     clk_i      => clk_25mhz,
@@ -197,6 +196,9 @@ begin
   clk_pixel_shift <= pll_clk(0);
   clk_pixel <= pll_clk(1);
   clk <= pll_clk(2);
+
+  -- Reset logic: hold in reset until PLL locks
+  S_reset <= not pll_lock;
 
   -- Simple serial passthrough
   S_rxd <= ftdi_txd;
@@ -209,20 +211,23 @@ begin
   sd_cmd <= S_f32c_sd_mosi;
   sd_d(2 downto 1) <= (others => '1');
 
-  -- SPI signal routing (external ports to internal bidirectional signals)
-  S_spi_miso(0) <= flash_miso;
-  S_spi_miso(1) <= S_f32c_sd_miso;
+  -- SPI signal routing (single assignment to avoid multiple drivers)
+  S_spi_miso <= S_f32c_sd_miso & flash_miso;  -- (1) SD card, (0) flash
   flash_mosi <= S_spi_mosi(0);
   S_f32c_sd_mosi <= S_spi_mosi(1);
 
-  -- Simple_in mapping
-  S_simple_in <= (others => '0');
-  S_simple_in(6 downto 0) <= btn;
-  S_simple_in(19 downto 16) <= sw;
+  -- Simple_in mapping (single assignment to avoid multiple drivers)
+  S_simple_in <= x"000" & sw & "000000000" & btn;
 
-  -- SDRAM data bus (16-bit external, 32-bit internal - upper half unused)
-  sdram_d <= S_sdram_data(15 downto 0);
+  -- SDRAM data bus: BIDIRECTIONAL handling for simulation
+  -- Both directions needed: CPU->SDRAM (writes) and SDRAM->CPU (reads)
+  -- Using std_logic resolution: multiple drivers resolve properly
+  -- Upper 16 bits of S_sdram_data are unused, tie to 'Z'
   S_sdram_data(31 downto 16) <= (others => 'Z');
+  -- Bidirectional connection: both signals drive each other
+  -- When one drives 'Z', the other's data propagates through
+  sdram_d <= S_sdram_data(15 downto 0);           -- Output path: CPU writes to SDRAM
+  S_sdram_data(15 downto 0) <= sdram_d;           -- Input path: SDRAM reads by CPU
   sdram_dqm <= S_sdram_dqm(1 downto 0);
 
   -- Main SoC
@@ -234,7 +239,7 @@ begin
     C_bram_size => C_bram_size,
     C_bram_const_init => C_bram_const_init,
     C_boot_write_protect => C_boot_write_protect,
-    C_boot_spi => C_boot_spi,
+    C_boot_spi => C_boot_spi,  -- false = serial bootloader
     C_branch_prediction => C_branch_prediction,
     C_PC_mask => C_PC_mask,
     C_acram => C_acram,
@@ -352,8 +357,8 @@ begin
   );
   flash_csn <= S_flash_csn;
 
-  -- GPIO directly output
-  gp <= S_gpio(27 downto 0);
-  gn <= S_gpio(59 downto 32);
+  -- GPIO disabled for GHDL tristate fix - tie to ground
+  gp <= (others => '0');
+  gn <= (others => '0');
 
 end Behavioral;

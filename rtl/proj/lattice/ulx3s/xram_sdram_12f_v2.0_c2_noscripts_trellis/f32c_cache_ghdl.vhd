@@ -134,9 +134,9 @@ architecture x of f32c_cache_ghdl is
     signal icache_write, instr_ready: std_logic;
     signal flush_i_line, flush_d_line: std_logic;
 
-    signal R_i_strobe: std_logic;
-    signal R_i_addr: std_logic_vector(31 downto 2);
-    signal R_i_burst_len: std_logic_vector(2 downto 0);
+    signal R_i_strobe: std_logic := '0'; -- GHDL: init
+    signal R_i_addr: std_logic_vector(31 downto 2) := (others => '0'); -- GHDL: init
+    signal R_i_burst_len: std_logic_vector(2 downto 0) := (others => '0'); -- GHDL: init
 
     --
     -- Old I-cache declarations end here, new D-cache stuff below
@@ -157,7 +157,7 @@ architecture x of f32c_cache_ghdl is
     signal M_d_bram: T_dcache_bram;
     signal R_d_tag_from_bram: std_logic_vector(C_d_tag_bits - 1 downto 0);
     signal R_d_data_from_bram: std_logic_vector(31 downto 0);
-    signal R_d_cacheable_cycle, R_d_fetch_done: boolean;
+    signal R_d_cacheable_cycle, R_d_fetch_done: boolean := false; -- GHDL: init
     signal R_d_rd_addr: std_logic_vector(31 downto 2);
 
     signal d_rd_addr, d_wr_addr: std_logic_vector(C_d_addr_bits - 1 downto 2);
@@ -171,9 +171,9 @@ architecture x of f32c_cache_ghdl is
     type T_sb_mem is array(0 to C_store_buffer_slots)
       of std_logic_vector(32 - 2 + 4 + 32 - 1 downto 0);
     signal M_sb: T_sb_mem;
-    signal R_sb_head: natural range 0 to C_store_buffer_slots;
-    signal R_sb_tail: natural range 0 to C_store_buffer_slots;
-    signal R_sb_queued: natural range 0 to C_store_buffer_slots;
+    signal R_sb_head: natural range 0 to C_store_buffer_slots := 0; -- GHDL: init
+    signal R_sb_tail: natural range 0 to C_store_buffer_slots := 0; -- GHDL: init
+    signal R_sb_queued: natural range 0 to C_store_buffer_slots := 0; -- GHDL: init
     signal R_sb_empty: boolean := true;
     signal R_sb_full: boolean := false;
 

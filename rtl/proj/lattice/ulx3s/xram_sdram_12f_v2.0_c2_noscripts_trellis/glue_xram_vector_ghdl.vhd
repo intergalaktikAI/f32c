@@ -587,7 +587,7 @@ architecture Behavioral of glue_xram is
       std_logic_vector(31 downto 0);
     signal from_sio: from_sio_type;
     signal sio_ce, sio_tx, sio_rx: std_logic_vector(C_sio - 1 downto 0);
-    signal sio_break_internal: std_logic_vector(C_sio - 1 downto 0);
+    signal sio_break_internal: std_logic_vector(C_sio - 1 downto 0) := (others => '0');  -- GHDL sim: init to avoid 'U' on reset
 
     -- SPI (on-board Flash, SD card, others...)
     constant iomap_spi: T_iomap_range := (x"FB40", x"FB7F");
@@ -600,7 +600,7 @@ architecture Behavioral of glue_xram is
     -- Simple I/O: onboard LEDs, buttons and switches
     constant iomap_simple_in: T_iomap_range := (x"FF00", x"FF0F");
     constant iomap_simple_out: T_iomap_range := (x"FF10", x"FF1F");
-    signal R_simple_in, R_simple_out: std_logic_vector(31 downto 0);
+    signal R_simple_in, R_simple_out: std_logic_vector(31 downto 0) := (others => '0'); -- GHDL: init LEDs to 0
 
     -- external RAM signals (currently only used for RAM emulation)
     signal xram_request, xram_write: std_logic;
